@@ -18,17 +18,17 @@ Answer:
 class ResponseGenerator:
     def __init__(self, schema: str):
         model_name = "Qwen/Qwen2.5-0.5B-Instruct"
-        self.model = AutoModelForCausalLM.from_pretrained(
+        self._model = AutoModelForCausalLM.from_pretrained(
             model_name,
             dtype="auto",
             device_map="auto"
         )
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.schema = schema
+        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._schema = schema
 
     def __call__(self, question: str, query: str, query_result_str: str):
         prompt = PROMPT_TEMPLATE
-        prompt = prompt.replace("<SCHEMA>", self.schema)
+        prompt = prompt.replace("<SCHEMA>", self._schema)
         prompt = prompt.replace("<QUESTION>", question)
         prompt = prompt.replace("<QUERY>", query)
         prompt = prompt.replace("<QUERY-RESULT-STR>", query_result_str)
@@ -37,16 +37,16 @@ class ResponseGenerator:
             {"role": "system", "content": "Answer the user question using the provided Neo4j context. Only response the query result in natural language."},
             {"role": "user", "content": prompt}
         ]
-        text = self.tokenizer.apply_chat_template(
+        text = self._tokenizer.apply_chat_template(
             messages,
             tokenize=False,
             add_generation_prompt=True
         )
         model_inputs = (
-            self.tokenizer([text], return_tensors="pt")
-            .to(self.model.device)
+            self._tokenizer([text], return_tensors="pt")
+            .to(self._model.device)
         )
-        generated_ids = self.model.generate(
+        generated_ids = self._model.generate(
             **model_inputs,
             max_new_tokens=512
         )
@@ -55,7 +55,7 @@ class ResponseGenerator:
             for input_ids, output_ids in zip(model_inputs.input_ids,
                                              generated_ids)
         ]
-        response = self.tokenizer.batch_decode(
+        response = self._tokenizer.batch_decode(
             generated_ids,
             skip_special_tokens=True
         )
