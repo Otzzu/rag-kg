@@ -1,6 +1,6 @@
-from database import GraphDatabaseDriver
-from response_generator import ResponseGenerator
-from text_to_cypher import TextToCypher
+from backend.database import GraphDatabaseDriver
+from backend.response_generator import ResponseGenerator
+from backend.text_to_cypher import TextToCypher
 
 with GraphDatabaseDriver() as driver:
     with open("schema_example.txt") as fp:

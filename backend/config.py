@@ -1,4 +1,5 @@
 import tomllib
+import os
 
 class Config:
     def __init__(self, data: dict[str]):
@@ -16,5 +17,7 @@ class Config:
         return neo4j_data["database_name"]
 
 def load_config(toml_path: str = "config.toml"):
+    if not os.path.exists(toml_path):
+        toml_path = os.path.join(os.path.dirname(__file__), "..", toml_path)
     with open(toml_path, mode="rb") as fp:
         return Config(tomllib.load(fp))

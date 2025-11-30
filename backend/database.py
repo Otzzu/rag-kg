@@ -1,4 +1,4 @@
-from config import load_config
+from backend.config import load_config
 from neo4j import GraphDatabase as Neo4jDatabase
 
 class GraphDatabaseDriver:
