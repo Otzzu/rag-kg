@@ -48,24 +48,24 @@ if question := st.chat_input("Masukkan pertanyaan..."):
             st.code(cypher_query, language="cypher")
             
             # 2. Execute Query
-            st.write("Executing database query...")
-            context_str = ""
-            try:
-                with GraphDatabaseDriver() as driver:
-                    results = driver.execute_query(cypher_query)
+            # st.write("Executing database query...")
+            # context_str = ""
+            # try:
+            #     with GraphDatabaseDriver() as driver:
+            #         results = driver.execute_query(cypher_query)
                 
-                if results:
-                    st.success(f"Found {len(results)} records.")
-                    st.json(results, expanded=False)
-                    context_str = "\n".join([str(x) for x in results])
-                else:
-                    st.warning("No data found.")
-                    context_str = "(no result)"
+            #     if results:
+            #         st.success(f"Found {len(results)} records.")
+            #         st.json(results, expanded=False)
+            #         context_str = "\n".join([str(x) for x in results])
+            #     else:
+            #         st.warning("No data found.")
+            #         context_str = "(no result)"
             
-            except Exception as e:
-                st.error(f"Database error: {e}")
-                context_str = "(error occurred)"
-            # context_str = "36" ini buat tes saja
+            # except Exception as e:
+            #     st.error(f"Database error: {e}")
+            #     context_str = "(error occurred)"
+            context_str = "{'level': 36}" #ini buat tes saja
                 
             # 3. Generate Answer
             st.write("Generating final response...")

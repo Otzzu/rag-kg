@@ -39,7 +39,7 @@ Cypher:"""
 class TextToCypher:
     def __init__(self, schema: str):
         self._schema = schema
-        self._pipe = pipeline("text-generation", model="VoErik/cypher-gemma")
+        self._pipe = pipeline("text-generation", model="VoErik/cypher-gemma", device_map="auto")
 
     def __call__(self, question: str):
         prompt = PROMPT_TEMPLATE
