@@ -1,9 +1,9 @@
-from backend.config import load_config
+from backend.config import Config
 from neo4j import GraphDatabase as Neo4jDatabase
 
 class GraphDatabaseDriver:
-    def __init__(self, toml_config_path: str = "config.toml"):
-        self._config = load_config(toml_config_path)
+    def __init__(self, config: Config):
+        self._config = config
         self._driver = None
         self._last_result_details = None
 
