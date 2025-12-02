@@ -1,16 +1,152 @@
 Node properties:
 - **Player**
-- accountId: INTEGER
-- username: STRING Example: "Nicki1202"
-- **Level**
-- id: INTEGER
-- name: STRING Example: "OuterSpace"
-- **Comment**
-- id: INTEGER
-- content: STRING Example: "GG! Nice level:)"
+- `name`: STRING   Example: "Filbert"
+- `vp`: INTEGER    Min: 0, Max: 20
+- `cardCount`: INTEGER   Min: 0, Max: 30
+- `color`: STRING Example: "Blue"
+
+- **Piece**
+- `id`: STRING Example: "stMesach"
+- `type`: STRING Available options: ["Road", "Settlement", "City", "Robber"]
+
+- **Resource**
+- `name`: STRING Available options: ["Brick", "Lumber", "Wool", "Grain", "Ore"]
+
+- **DevCardInstance**
+- `id`: STRING Example: "dc_ivan_1"
+- `status`: STRING Available options: ["Hidden", "Played"]
+
+- **GameState**
+- `current_phase`: STRING Example: "Trade"
+- `turn_number`: INTEGER Min: 0, Max: 200
+- `current_turn_player`: STRING Example: "Filbert"
+
+- **Hex**
+- `id`: STRING Example: "h1"
+- `number`: INTEGER Min: 0, Max: 12
+
+- **Intersection**
+- `id`: STRING Example: "iA"
+
+- **Path**
+- `id`: STRING Example: "pAB"
+
+- **Harbor**
+- `id`: STRING Example: "harbor1"
+- `type`: STRING Available options: ["Generic", "Special"]
+- `ratio`: INTEGER Min: 2, Max: 4
+
+- **BuildingType**
+- `name`: STRING Available options: ["Road", "Settlement", "City"]
+- `vp_value`: INTEGER Min: 0, Max: 2
+- `limit`: INTEGER Min: 1, Max: 15
+
+- **DevCardType**
+- `name`: STRING Available options: ["Knight", "Victory Point", "Monopoly", "Year of Plenty", "Road Building"]
+- `description`: STRING Example: "Move the Robber"
+- `is_playable`: BOOLEAN
+
+- **TradeOption**
+- `name`: STRING Available options: ["Bank Trade", "Generic Port", "Special Port"]
+- `rate`: INTEGER Min: 2, Max: 4
+
+- **TerrainType**
+- `name`: STRING Available options: ["Forest", "Hills", "Pasture", "Fields", "Mountains", "Desert"]
+
+- **DiceNumber**
+- `value`: INTEGER Min: 0, Max: 12
+
+- **Odds**
+- `pips`: INTEGER Min: 1, Max: 6
+- `probability`: STRING Available options: ["Low", "Low-Mid", "Medium", "Mid-High", "High", "Highest"]
+
+- **Rule**
+- `name`: STRING Example: "Distance Rule"
+- `description`: STRING
+- `phase`: STRING Available options: ["Setup", "Trade", "Build", "Roll", "Robber"]
+
+- **SpecialCard**
+- `name`: STRING Available options: ["Longest Road", "Largest Army"]
+- `bonus_vp`: INTEGER Min: 1, Max: 2
+
 Relationship properties:
+- **HAS_RESOURCE**
+- `amount`: INTEGER Min: 0, Max: 20
+
+- **COSTS**
+- `amount`: INTEGER Min: 1, Max: 5
 
 The relationships:
-(:Player)-[:SHARES]->(:Level)
-(:Player)-[:SUBMITS]->(:Comment)
-(:Level)-[:HAS]->(:Comment)
+(:Player)-[:OWNS]->(:Piece)
+(:Player)-[:HAS_RESOURCE]->(:Resource)
+(:Player)-[:HOLDS_DEVCARD]->(:DevCardInstance)
+(:Player)-[:HOLDS_TROPHY]->(:SpecialCard)
+(:GameState)-[:ACTIVE_PLAYER]->(:Player)
+
+(:Piece)-[:PLACED_ON]->(:Intersection)
+(:Piece)-[:PLACED_ON]->(:Path)
+(:Piece)-[:LOCATED_AT]->(:Hex)
+
+(:Path)-[:CONNECTS_TO]->(:Intersection)
+(:Intersection)-[:ADJACENT_TO]->(:Intersection)
+(:Intersection)-[:TOUCHES]->(:Hex)
+(:Intersection)-[:HAS_HARBOR]->(:Harbor)
+
+(:Piece)-[:INSTANCE_OF]->(:BuildingType)
+(:DevCardInstance)-[:IS_TYPE]->(:DevCardType)
+
+(:BuildingType)-[:COSTS]->(:Resource)
+(:DevCardType)-[:COSTS]->(:Resource)
+(:BuildingType)-[:UPGRADES_FROM]->(:BuildingType)
+(:BuildingType)-[:GOVERNED_BY]->(:Rule)
+(:DiceNumber)-[:GOVERNED_BY]->(:Rule)
+
+(:Hex)-[:IS_TYPE]->(:TerrainType)
+(:TerrainType)-[:PRODUCES]->(:Resource)
+(:Hex)-[:HAS_TOKEN]->(:DiceNumber)
+(:DiceNumber)-[:HAS_ODDS]->(:Odds)
+
+(:DiceNumber)-[:ACTIVATES]->(:Piece)
+
+(:Harbor)-[:ALLOWS_ACCESS]->(:TradeOption)
+(:Harbor)-[:FOR_RESOURCE]->(:Resource)
+(:Player)-[:HAS_ACCESS]->(:TradeOption)
+
+
+Domain notes:
+- This graph represents the board game Catan, using nodes and relationships to describe players, the board, resources, and rules.
+- A Player owns Pieces (Roads, Settlements, Cities, Robber) via OWNS, and each Piece is placed on either an Intersection or a Path via PLACED_ON.
+- An Intersection TOUCHES one or more Hex tiles. A Player receives resources from a Hex only if they own a Settlement or City (Piece of type "Settlement" or "City") on an Intersection that TOUCHES that Hex.
+- Each Hex has a DiceNumber token via HAS_TOKEN. When a dice number X is rolled, every Hex connected to DiceNumber {value: X} via HAS_TOKEN can produce resources for adjacent players (subject to terrain type and robber rules).
+- Resources are produced from terrain, not directly from players' hands:
+  - Hex -[:IS_TYPE]-> TerrainType -[:PRODUCES]-> Resource
+  - Then resource cards are added to the Player's hand using HAS_RESOURCE.
+- The HAS_RESOURCE relationship represents the cards currently in a player's hand. Do NOT use HAS_RESOURCE to decide who should receive resources from a dice roll; instead, use the Hex and board structure.
+- The Desert terrain never produces resources, even if it has a dice token.
+- The Robber is represented as a Piece of type "Robber" and its location is tracked with LOCATED_AT to a Hex. The Hex with the Robber does not produce any resources when its dice number is rolled.
+- Cities and settlements are both Pieces. They are distinguished by the Piece.type and their underlying BuildingType:
+  - Settlements produce 1 resource card per matching Hex.
+  - Cities produce 2 resource cards per matching Hex.
+- Harbors are connected to Intersections via HAS_HARBOR. To use a Harbor's trade effect, a Player must have a Settlement or City on an Intersection that HAS_HARBOR that Harbor.
+- Harbors grant access to TradeOption nodes via ALLOWS_ACCESS. Generic ports usually allow 3:1 trade for any resource, while special ports allow 2:1 trade for a specific resource (connected via FOR_RESOURCE).
+- SpecialCard nodes represent Longest Road and Largest Army bonuses. A Player that HOLDS_TROPHY a SpecialCard gains its bonus_vp victory points.
+- Rule nodes store textual descriptions of game rules (for example building rules, distance rules, or dice rules) and are linked to the elements they govern using GOVERNED_BY.
+- DiceNumber nodes store the possible sums of the two dice (normally 2–12). They are linked to Odds via HAS_ODDS to represent how likely each dice result is.
+- GameState represents the current status of a game: it tracks the current_turn_player (a Player name for convenience), the current_phase, the turn_number, and the ACTIVE_PLAYER relationship to the Player whose turn it is.
+- Typical turn flow for the ACTIVE_PLAYER:
+  - Setup phase ("Setup"): players initially place starting Settlements and Roads according to the setup rules. This can be represented by creating Pieces and PLACED_ON relationships before the main game loop.
+  - Roll phase ("Roll"): at the start of a turn, the active player rolls two dice. The sum corresponds to a DiceNumber node.
+  - Robber phase ("Robber"): if the sum is 7, or if a Knight development card is played, the robber effect is resolved. The active player moves the Robber Piece to a new Hex via LOCATED_AT; that Hex no longer produces resources while the robber is there, and the robber may trigger discarding and stealing cards (which can be reflected via HAS_RESOURCE changes).
+  - Production: if the roll is not a robber result, all Hex nodes connected to the rolled DiceNumber via HAS_TOKEN produce resources. For each such Hex:
+      - Find all adjacent Settlements and Cities via TOUCHES and PLACED_ON.
+      - Give 1 resource card for each Settlement and 2 for each City to the owning Player via HAS_RESOURCE.
+  - Trade phase ("Trade"): the active player may trade resources with other players (not explicitly modeled here) or with the bank/harbors. Maritime trades use TradeOption (Bank Trade, Generic Port, Special Port) and any HAS_ACCESS relationships the player has.
+  - Build phase ("Build"): the active player may spend resources to:
+      - Build Roads, Settlements, or Cities (using BuildingType and COSTS relationships to Resource).
+      - Buy Development Cards (using DevCardType and COSTS).
+    These actions update HAS_RESOURCE and create new Pieces and PLACED_ON relationships, or new DevCardInstance nodes via HOLDS_DEVCARD.
+  - End of turn: once the player finishes trading and building, control passes to the next player. The GameState.turn_number is incremented, and ACTIVE_PLAYER is updated to point to the next Player.
+- Victory points:
+  - Players gain VP from buildings (via BuildingType.vp_value and the Pieces they own) and from SpecialCard bonus_vp (Longest Road, Largest Army) when they HOLDS_TROPHY that card.
+  - The Player.vp property can be used to track total victory points and to determine when a player reaches the winning threshold (usually 10 VP).
+

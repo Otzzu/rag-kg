@@ -55,6 +55,7 @@ class TextToCypher:
         )[0]
 
         generated_text = output["generated_text"]
+        print("Raw generated text:", generated_text)
         generated_text = generated_text.replace("```cypher", "").replace("```", "")
 
         if "Cypher:" in generated_text:

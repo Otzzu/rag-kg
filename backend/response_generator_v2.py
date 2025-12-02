@@ -1,6 +1,6 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-DOMAIN_NAME = ""
+DOMAIN_NAME = "Catan Base Game Rules & Strategy"
 ROLE_DESCRIPTION = f"""
 You are a smart and friendly assistant specialized in analyzing {DOMAIN_NAME} data.
 Your task is to answer user questions based strictly on the data found in the database.
@@ -8,36 +8,31 @@ You should use a helpful, professional, yet conversational tone.
 """
 
 PROMPT_TEMPLATE = """
-<SYSTEM>
+### System
 [ROLE_DESCRIPTION]
 
 IMPORTANT RULES:
-1. Answer ONLY based on the information provided in <EVIDENCE>.
-2. If <EVIDENCE> indicates NO data, apologize politely and state that you could not find that information in the database.
+1. Answer ONLY based on the information provided in the Evidence section.
+2. If the Evidence indicates NO data, apologize politely and state that you could not find that information in the database.
 3. Do NOT hallucinate or invent facts not present in the evidence.
 4. If the data is technical, explain it in simple terms.
-</SYSTEM>
 
-<CONTEXT>
+### Context
 Domain: [DOMAIN_NAME]
 Schema:
 [SCHEMA]
-</CONTEXT>
 
-<USER_QUESTION>
+### User Question
 [QUESTION]
-</USER_QUESTION>
 
-<GENERATED_CYPHER>
+### Generated Cypher Query
 [QUERY]
-</GENERATED_CYPHER>
 
-<EVIDENCE>
+### Evidence
 [QUERY_RESULT_STR]
 ([EVIDENCE_STATUS])
-</EVIDENCE>
 
-<ANSWER>
+### Answer
 """.strip()
 
 class ResponseGenerator:
@@ -46,7 +41,7 @@ class ResponseGenerator:
         self._model = AutoModelForCausalLM.from_pretrained(
             model_name,
             dtype="auto",
-            device_map="auto"
+            device_map="cpu"
         )
         self._tokenizer = AutoTokenizer.from_pretrained(model_name)
         self._schema = schema
@@ -99,6 +94,9 @@ class ResponseGenerator:
         response = self._tokenizer.batch_decode(
             generated_ids,
             skip_special_tokens=True
-        )
-        return response[0]
+        )[0]
 
+        if "###" in response:
+            response = response.split("###")[0]
+
+        return response.strip()
