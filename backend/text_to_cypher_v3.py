@@ -3,24 +3,24 @@ from transformers import (
     AutoTokenizer,
     BitsAndBytesConfig,
 )
-from peft import PeftModel, PeftConfig
 import torch
+from backend.config import Config
 
 class TextToCypher:
-    def __init__(self, schema: str):
+    def __init__(self, schema: str, config: Config, model: str = "neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0"):
         self._schema = schema
+        self._config = config
         # self._pipe = pipeline("text-generation", model="neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0", device_map="auto")
         # self._pipe = pipeline("text-generation", model="VoErik/cypher-gemma", device_map="auto")
-        model_name = "neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0"
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
             bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16,
         )
-        self._tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self._tokenizer = AutoTokenizer.from_pretrained(model)
         self._model = AutoModelForCausalLM.from_pretrained(
-            model_name,
+            model,
             quantization_config=bnb_config,
             dtype=torch.bfloat16,
             attn_implementation="eager",
@@ -44,23 +44,19 @@ class TextToCypher:
         return chat
     
     def postprocess_output_cypher(self, output_cypher: str) -> str:
-        # Remove any explanation. E.g.  MATCH...\n\n**Explanation:**\n\n -> MATCH...
-        # Remove cypher indicator. E.g.```cypher\nMATCH...```` --> MATCH...
-        # Note: Possible to have both:
-        #   E.g. ```cypher\nMATCH...````\n\n**Explanation:**\n\n --> MATCH...
         partition_by = "**Explanation:**"
         output_cypher, _, _ = output_cypher.partition(partition_by)
         output_cypher = output_cypher.strip("`\n")
         output_cypher = output_cypher.lstrip("cypher\n")
         output_cypher = output_cypher.strip("`\n ")
+        output_cypher = output_cypher.replace("\\n", " ")
         return output_cypher
 
-    def __call__(self, question: str, chat_history: str = "", previous_error: str = ""):
+    def __call__(self, question: str):
         new_message = self.prepare_chat_prompt(question=question, schema=self._schema)
         prompt = self._tokenizer.apply_chat_template(new_message, add_generation_prompt=True, tokenize=False)
         inputs = self._tokenizer(prompt, return_tensors="pt", padding=True)
 
-        # Any other parameters
         model_generate_parameters = {
             "top_p": 0.9,
             "temperature": 0.1,
@@ -78,15 +74,6 @@ class TextToCypher:
             outputs = [self.postprocess_output_cypher(output) for output in raw_outputs]
 
         print("Raw generated text:", raw_outputs)
+        print("Post-processed Cypher:", outputs)
         return outputs
 
-if __name__ == "__main__":
-    with open("schema.txt") as fp:
-        schema = fp.read().strip()
-
-    print("Preparing pipeline ....")
-    ttc = TextToCypher(schema)
-
-    print("Generating ...")
-    cypher = ttc("Which players currently have access to a 2:1 special port?")
-    print(cypher)

@@ -110,7 +110,6 @@ The relationships:
 
 (:Harbor)-[:ALLOWS_ACCESS]->(:TradeOption)
 (:Harbor)-[:FOR_RESOURCE]->(:Resource)
-(:Player)-[:HAS_ACCESS]->(:TradeOption)
 
 
 Domain notes:
@@ -128,7 +127,7 @@ Domain notes:
   - Settlements produce 1 resource card per matching Hex.
   - Cities produce 2 resource cards per matching Hex.
 - Harbors are connected to Intersections via HAS_HARBOR. To use a Harbor's trade effect, a Player must have a Settlement or City on an Intersection that HAS_HARBOR that Harbor.
-- Harbors grant access to TradeOption nodes via ALLOWS_ACCESS. Generic ports usually allow 3:1 trade for any resource, while special ports allow 2:1 trade for a specific resource (connected via FOR_RESOURCE).
+- Harbors grant access to TradeOption nodes via ALLOWS_ACCESS. Generic ports usually allow 3:1 trade for any resource, while special ports allow 2:1 trade for a specific resource (connected via FOR_RESOURCE). Harbor access should normally be inferred from intersection placement.
 - SpecialCard nodes represent Longest Road and Largest Army bonuses. A Player that HOLDS_TROPHY a SpecialCard gains its bonus_vp victory points.
 - Rule nodes store textual descriptions of game rules (for example building rules, distance rules, or dice rules) and are linked to the elements they govern using GOVERNED_BY.
 - DiceNumber nodes store the possible sums of the two dice (normally 2–12). They are linked to Odds via HAS_ODDS to represent how likely each dice result is.
@@ -140,7 +139,7 @@ Domain notes:
   - Production: if the roll is not a robber result, all Hex nodes connected to the rolled DiceNumber via HAS_TOKEN produce resources. For each such Hex:
       - Find all adjacent Settlements and Cities via TOUCHES and PLACED_ON.
       - Give 1 resource card for each Settlement and 2 for each City to the owning Player via HAS_RESOURCE.
-  - Trade phase ("Trade"): the active player may trade resources with other players (not explicitly modeled here) or with the bank/harbors. Maritime trades use TradeOption (Bank Trade, Generic Port, Special Port) and any HAS_ACCESS relationships the player has.
+  - Trade phase ("Trade"): the active player may trade resources with other players or with the bank/harbors. Maritime trades use TradeOption (Bank Trade, Generic Port, Special Port) based on harbors the player can access.
   - Build phase ("Build"): the active player may spend resources to:
       - Build Roads, Settlements, or Cities (using BuildingType and COSTS relationships to Resource).
       - Buy Development Cards (using DevCardType and COSTS).
@@ -148,5 +147,4 @@ Domain notes:
   - End of turn: once the player finishes trading and building, control passes to the next player. The GameState.turn_number is incremented, and ACTIVE_PLAYER is updated to point to the next Player.
 - Victory points:
   - Players gain VP from buildings (via BuildingType.vp_value and the Pieces they own) and from SpecialCard bonus_vp (Longest Road, Largest Army) when they HOLDS_TROPHY that card.
-  - The Player.vp property can be used to track total victory points and to determine when a player reaches the winning threshold (usually 10 VP).
-
+  - The Player.vp property stores total victory points and can be used to determine when a player reaches the winning threshold (usually 10 VP).

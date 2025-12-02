@@ -16,8 +16,9 @@ class Config:
         neo4j_data = self._data["neo4j"]
         return neo4j_data["database_name"]
     
-    def get(self, key: str, default=None):
-        return self._data.get(key, default)
+    def get_openai_key(self):
+        openai_data = self._data["openai"]
+        return openai_data["openai_api_key"]
 
 def load_config(toml_path: str = "config.toml"):
     if not os.path.exists(toml_path):
