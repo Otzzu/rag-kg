@@ -25,7 +25,8 @@ def init_resources():
     
     config = load_config()
     
-    return TextToCypher(schema, config, "kwaipilot/kat-coder-pro:free"), ResponseGenerator(schema), config
+    # return TextToCypher(schema, config, "kwaipilot/kat-coder-pro:free"), ResponseGenerator(schema), config
+    return TextToCypher(schema, config), ResponseGenerator(schema), config
 
 with st.spinner("Loading system..."):
     ttc, generator, config = init_resources()
