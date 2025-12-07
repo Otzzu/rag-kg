@@ -34,11 +34,10 @@ if __name__ == "__main__":
             """
         )
 
-        # Loop through results and do something with them
         for x in results:
-            print(x)  # obtain record as dict
+            print(x)
 
-        # Summary information
+        # summary info
         records, summary, keys = driver.get_last_result_details()
         print("The query `{query}` returned {records_count} records in {time} ms.".format(
             query=summary.query, records_count=len(records),

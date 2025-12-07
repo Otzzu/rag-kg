@@ -10,7 +10,7 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("Knowledge Graph RAG")
+st.title("Catan RAG")
 st.caption("IF4070 Representasi Pengetahuan & Penalaran")
 
 @st.cache_resource
@@ -24,8 +24,6 @@ def init_resources():
         schema = fp.read().strip()
     
     config = load_config()
-    
-    # return TextToCypher(schema, config, "kwaipilot/kat-coder-pro:free"), ResponseGenerator(schema), config
     return TextToCypher(schema, config), ResponseGenerator(schema), config
 
 with st.spinner("Loading system..."):
@@ -46,7 +44,7 @@ if question := st.chat_input("Masukkan pertanyaan..."):
     with st.chat_message("assistant"):
         with st.status("Processing...", expanded=True) as status:
             
-            # 1. Generate Cypher
+            # generate cypher
             st.write("Generating Cypher query...")
             cypher_queries = ttc(question)
 
@@ -62,7 +60,7 @@ if question := st.chat_input("Masukkan pertanyaan..."):
                 st.markdown(f"**Cypher Query {i}:**")
                 st.code(q, language="cypher")
 
-            # 2. Execute Query
+            # execute query
             st.write("Executing database query...")
             all_results = []
             context_str_parts = []
@@ -91,7 +89,7 @@ if question := st.chat_input("Masukkan pertanyaan..."):
                 st.error(f"Database error: {e}")
                 context_str = f"(error occurred: {e})"
 
-            # 3. Generate Answer
+            # generate answer
             st.write("Generating final response...")
 
             combined_cypher = "\n\n".join(cypher_queries)
@@ -99,6 +97,5 @@ if question := st.chat_input("Masukkan pertanyaan..."):
             
             status.update(label="Done", state="complete", expanded=False)
 
-        
         st.markdown(final_answer)
         st.session_state.messages.append({"role": "assistant", "content": final_answer})

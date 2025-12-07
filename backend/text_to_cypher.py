@@ -3,7 +3,6 @@ from transformers import pipeline
 class TextToCypher:
     def __init__(self, schema: str):
         self._schema = schema
-        # self._pipe = pipeline("text-generation", model="neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0", device_map="auto")
         self._pipe = pipeline("text-generation", model="VoErik/cypher-gemma", device_map="auto")
 
     def __call__(self, question: str, chat_history: str = "", previous_error: str = ""):

@@ -2,31 +2,30 @@ from openai import OpenAI
 from backend.config import Config
 
 EXAMPLES = """
-Question: List all players and their total victory points.
-Cypher: MATCH (p:Player)-[:HAS_PIECE]->(piece:Piece)
-        RETURN p.name AS playerName, SUM(piece.vp) AS totalVP
-        ORDER BY totalVP DESC;
+    Question: List all players and their total victory points.
+    Cypher: MATCH (p:Player)-[:HAS_PIECE]->(piece:Piece)
+            RETURN p.name AS playerName, SUM(piece.vp) AS totalVP
+            ORDER BY totalVP DESC;
 
-Question: Find all settlements owned by the player whose name contains 'mesach'.
-Cypher: MATCH (p:Player)-[:OWNS]->(s:Settlement)
-        WHERE toLower(p.name) CONTAINS "mesach"
-        RETURN s;
+    Question: Find all settlements owned by the player whose name contains 'mesach'.
+    Cypher: MATCH (p:Player)-[:OWNS]->(s:Settlement)
+            WHERE toLower(p.name) CONTAINS "mesach"
+            RETURN s;
 
-Question: Get all tiles that produce lumber and their dice numbers.
-Cypher: MATCH (t:Tile)
-        WHERE toLower(t.resource) CONTAINS "lumber"
-        RETURN t.name AS tileName, t.diceNumber AS diceNumber;
+    Question: Get all tiles that produce lumber and their dice numbers.
+    Cypher: MATCH (t:Tile)
+            WHERE toLower(t.resource) CONTAINS "lumber"
+            RETURN t.name AS tileName, t.diceNumber AS diceNumber;
 
-Question: List all roads built by players whose name contains 'ivan'.
-Cypher: MATCH (p:Player)-[:BUILDS]->(r:Road)
-        WHERE toLower(p.name) CONTAINS "ivan"
-        RETURN p.name AS playerName, r;
+    Question: List all roads built by players whose name contains 'ivan'.
+    Cypher: MATCH (p:Player)-[:BUILDS]->(r:Road)
+            WHERE toLower(p.name) CONTAINS "ivan"
+            RETURN p.name AS playerName, r;
 
-Question: Find all harbor nodes and the players connected to them.
-Cypher: MATCH (h:Harbor)<-[:ADJACENT_TO]-(i:Intersection)<-[:OWNS]-(p:Player)
-        RETURN h, p;
+    Question: Find all harbor nodes and the players connected to them.
+    Cypher: MATCH (h:Harbor)<-[:ADJACENT_TO]-(i:Intersection)<-[:OWNS]-(p:Player)
+            RETURN h, p;
 """
-
 
 class TextToCypher:
     def __init__(
@@ -64,26 +63,9 @@ class TextToCypher:
         self,
         question: str,
         schema: str,
-        # chat_history: str = "",
-        # previous_error: str = "",
     ) -> list[dict]:
 
         content = self._instruction.format(schema=schema, question=question)
-
-        # if previous_error:
-        #     content += (
-        #         "\n\nThe previous Cypher query caused the following error:\n"
-        #         f"{previous_error}\n"
-        #         "Please correct the query and output a fixed Cypher statement."
-        #     )
-
-        # if chat_history:
-        #     content += (
-        #         "\n\nSome previous conversation context (for reference only):\n"
-        #         f"{chat_history}\n"
-        #         "However, still output ONLY a single Cypher statement."
-        #     )
-
         chat = [
             {
                 "role": "system",
@@ -120,14 +102,10 @@ class TextToCypher:
     def __call__(
         self,
         question: str,
-        # chat_history: str = "",
-        # previous_error: str = "",
     ):
         messages = self.prepare_chat_prompt(
             question=question,
             schema=self._schema,
-            # chat_history=chat_history,
-            # previous_error=previous_error,
         )
 
         response = self._client.chat.completions.create(

@@ -10,8 +10,6 @@ class TextToCypher:
     def __init__(self, schema: str, config: Config, model: str = "neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0"):
         self._schema = schema
         self._config = config
-        # self._pipe = pipeline("text-generation", model="neo4j/text-to-cypher-Gemma-3-4B-Instruct-2025.04.0", device_map="auto")
-        # self._pipe = pipeline("text-generation", model="VoErik/cypher-gemma", device_map="auto")
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=True,
             bnb_4bit_use_double_quant=True,
@@ -76,4 +74,3 @@ class TextToCypher:
         print("Raw generated text:", raw_outputs)
         print("Post-processed Cypher:", outputs)
         return outputs
-
