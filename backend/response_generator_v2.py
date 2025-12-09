@@ -5,14 +5,19 @@ SYSTEM_PROMPT = """
     Your sole purpose is to answer the user's question using ONLY the provided database evidence.
     
     RULES:
-    1. If the Evidence is empty or implies no results, say "I found no information in the database."
-    2. Do NOT use outside knowledge. Do NOT hallucinate.
-    3. Keep answers concise and direct.
+    1. Do NOT use outside knowledge. Do NOT hallucinate.
+    2. Keep answers concise and direct.
 """.strip()
 
 USER_PROMPT_TEMPLATE = """
+    ### Schema
+    [SCHEMA]
+
     ### User Question
     [QUESTION]
+    
+    ## Query
+    [QUERY]
 
     ### Database Evidence
     [QUERY_RESULT_STR]
@@ -23,8 +28,7 @@ USER_PROMPT_TEMPLATE = """
 
 class ResponseGenerator:
     def __init__(self, schema: str):
-        # Schema is technically unused in the prompt now to save tokens, 
-        # but kept in init for compatibility if needed later.
+        
         model_name = "Qwen/Qwen2.5-0.5B-Instruct"
         self._model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -35,7 +39,6 @@ class ResponseGenerator:
         self._schema = schema
 
     def __call__(self, question: str, query: str, query_result_str: str):
-        # 1. Hardcoded safeguards to prevent hallucination on empty/error results
         if query_result_str.strip() in ["(no result)", "[]", ""]:
             return "I couldn't find any information about that in the database."
         
@@ -44,9 +47,10 @@ class ResponseGenerator:
 
         evidence_status = "Data found."
 
-        # 2. Simplified Prompt for the model (only called when data exists)
         user_content = USER_PROMPT_TEMPLATE
+        user_content = user_content.replace("[SCHEMA]", self._schema)
         user_content = user_content.replace("[QUESTION]", question)
+        user_content = user_content.replace("[QUERY]", query)
         user_content = user_content.replace("[QUERY_RESULT_STR]", query_result_str)
         user_content = user_content.replace("[EVIDENCE_STATUS]", evidence_status)
 
