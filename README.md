@@ -6,7 +6,7 @@ This repository implements a Retrieval-Augmented Generation (RAG) system for ans
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Project Overview](#project-overview)
 - [System Architecture](#system-architecture)
@@ -16,11 +16,11 @@ This repository implements a Retrieval-Augmented Generation (RAG) system for ans
 - [Running the Application](#running-the-application)
 - [Testing the System](#testing-the-system)
 - [Configuration](#configuration)
-- [Troubleshooting](#troubleshooting)
+
 
 ---
 
-## 🎯 Project Overview
+## Project Overview
 
 This RAG system bridges natural language and structured graph data by:
 1. **Converting** user questions into Cypher queries (Text-to-Cypher)
@@ -31,7 +31,7 @@ The system supports both **local models** and **cloud-based models** (via OpenRo
 
 ---
 
-## 🏗️ System Architecture
+## System Architecture
 
 The system consists of three main components working in a pipeline:
 
@@ -43,29 +43,26 @@ User Question → Text-to-Cypher → Neo4j Database → Response Generator → F
 
 | Component | Purpose | Implementation Options |
 |-----------|---------|----------------------|
-| **Text-to-Cypher** | Converts natural language to Cypher queries | • **Local**: Using local LLM models<br>• **OpenRouter**: Using cloud-based models (Qwen3-Coder) |
+| **Text-to-Cypher** | Converts natural language to Cypher queries | • **v2**: Cloud-based (OpenRouter)<br>• **v3**: Local models |
 | **Database Driver** | Executes Cypher queries against Neo4j | Neo4j Python driver |
-| **Response Generator** | Generates natural language answers from query results | • **Local**: Qwen2.5-0.5B-Instruct (runs on CPU)<br>• **V2**: Enhanced version with better prompting |
+| **Response Generator** | Generates natural language answers from query results | • **v2**: Enhanced version with better prompting (Qwen2.5-0.5B-Instruct) |
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 rag-kg/
 ├── backend/                          # Core backend modules
 │   ├── config.py                     # Configuration loader (reads config.toml)
 │   ├── database.py                   # Neo4j database driver wrapper
-│   ├── text_to_cypher.py            # Text-to-Cypher (basic version)
-│   ├── text_to_cypher_v2.py         # Text-to-Cypher (improved, using OpenRouter)
-│   ├── text_to_cypher_v3.py         # Text-to-Cypher (alternative version)
-│   ├── response_generator.py        # Response generator (basic version)
+│   ├── text_to_cypher_v2.py         # Text-to-Cypher (OpenRouter version)
+│   ├── text_to_cypher_v3.py         # Text-to-Cypher (Local version)
 │   └── response_generator_v2.py     # Response generator (improved prompts)
 │
 ├── app.py                            # Streamlit web interface (main version)
 ├── rag.py                            # Simple CLI for RAG testing
-├── schema.txt                        # Neo4j graph schema (node types, relationships)
-├── knowledge-graph-2025-12-03T06-30-05.dump  # Neo4j database dump file
+├── knowledge-graph-catan.dump      # Neo4j database dump file
 │
 ├── config_template.toml              # Template for configuration file
 ├── config.toml                       # Your actual configuration (gitignored)
@@ -85,16 +82,16 @@ rag-kg/
 
 ---
 
-## ⚙️ How It Works
+## How It Works
 
-### 1️⃣ Text-to-Cypher Pipeline
+### 1. Text-to-Cypher Pipeline
 
 When you ask a question like *"How many players are there?"*:
 
 1. **Input Processing**: The question is combined with the graph schema from `schema.txt`
 2. **LLM Generation**: 
-   - **OpenRouter-based** (`text_to_cypher_v2.py`): Sends the question + schema to the Qwen3-Coder model via OpenRouter API
-   - **Local** (alternative versions): Uses locally hosted models
+   - **OpenRouter-based (v2)** (`text_to_cypher_v2.py`): Sends the question + schema to the Qwen3-Coder model via OpenRouter API
+   - **Local (v3)** (`text_to_cypher_v3.py`): Uses locally hosted models
 3. **Post-processing**: Cleans up the generated Cypher query (removes markdown fences, explanations)
 4. **Output**: Returns valid Cypher query(ies)
 
@@ -104,7 +101,7 @@ Question: "How many players are there?"
 Generated Cypher: MATCH (p:Player) RETURN COUNT(p) AS playerCount
 ```
 
-### 2️⃣ Database Execution
+### 2. Database Execution
 
 1. The generated Cypher query is sent to Neo4j via the `GraphDatabaseDriver`
 2. Neo4j executes the query against the knowledge graph
@@ -115,7 +112,7 @@ Generated Cypher: MATCH (p:Player) RETURN COUNT(p) AS playerCount
 [{"playerCount": 3}]
 ```
 
-### 3️⃣ Response Generation
+### 3. Response Generation
 
 1. **Input**: Original question + Cypher query + query results
 2. **Local LLM**: Qwen2.5-0.5B-Instruct processes this context
@@ -127,7 +124,7 @@ Generated Cypher: MATCH (p:Player) RETURN COUNT(p) AS playerCount
 "There are 3 players in the game."
 ```
 
-### 🔄 Full Example Flow
+### Full Example Flow
 
 ```
 User: "List all players and their victory points"
@@ -143,7 +140,7 @@ User sees final answer
 
 ---
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
 ### Prerequisites
 
@@ -158,29 +155,53 @@ git clone <your-repo-url>
 cd rag-kg
 ```
 
-### Step 2: Create Virtual Environment (Recommended)
+### Step 2: Install Dependencies
 
-```bash
-# Windows
-py -m venv venv
-.\venv\Scripts\Activate.ps1
+#### Option A: Using uv (Recommended)
 
-# Linux/Mac
-python3 -m venv venv
-source venv/bin/activate
-```
+This project is optimized for `uv`, which handles dependency resolution and GPU setup automatically.
 
-### Step 3: Install Dependencies
+1. **Install uv** (if not installed):
+   ```bash
+   pip install uv
+   ```
 
-```bash
-pip install -r requirements.txt
-```
+2. **Sync dependencies**:
+   ```bash
+   uv sync
+   ```
+   This creates a virtual environment `.venv` and installs all dependencies (including PyTorch with CUDA 12.1 support).
 
-**Note:** If you need GPU support for PyTorch, install the appropriate version:
-```bash
-# Example for CUDA 11.8
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-```
+   > **Changing CUDA Version with uv:**
+   > To use a different CUDA version (e.g., 11.8), you must update `pyproject.toml`.
+   > 1. Open `pyproject.toml`.
+   > 2. Find `[tool.uv.index]` section.
+   > 3. Change `url` to your desired PyTorch wheel index (e.g., `https://download.pytorch.org/whl/cu118`).
+   > 4. Run `uv sync` again.
+
+#### Option B: Standard pip
+
+1. **Create Virtual Environment**:
+   ```bash
+   # Windows
+   py -m venv venv
+   .\venv\Scripts\Activate.ps1
+   
+   # Linux/Mac
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+
+2. **Install Dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+   **Note:** If you need GPU support for PyTorch, you may need to install it manually:
+   ```bash
+   # Example for CUDA 11.8
+   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+   ```
 
 ### Step 4: Set Up Neo4j Database
 
@@ -214,7 +235,7 @@ neo4j-admin database load --from-path=<path-to-dump-file> neo4j
 1. Upload the dump file through the AuraDB console
 2. Or manually recreate the graph structure using the schema in `schema.txt`
 
-> **Important:** The dump file `knowledge-graph-2025-12-03T06-30-05.dump` contains the complete Catan game state including players, pieces, resources, and board configuration.
+> **Important:** The dump file `knowledge-graph-catan.dump` contains the complete Catan game state including players, pieces, resources, and board configuration.
 
 ### Step 6: Configure the Application
 
@@ -256,13 +277,17 @@ This should connect to Neo4j and run a sample query.
 
 ---
 
-## ▶️ Running the Application
+## Running the Application
 
 ### Web Interface (Recommended)
 
 Launch the Streamlit web application:
 
 ```bash
+# If using uv:
+uv run streamlit run app.py
+
+# If using standard venv:
 streamlit run app.py
 ```
 
@@ -280,6 +305,10 @@ The app will open in your browser at `http://localhost:8501`
 For quick testing without the web interface:
 
 ```bash
+# If using uv:
+uv run python rag.py
+
+# If using standard venv:
 python rag.py
 ```
 
@@ -287,7 +316,7 @@ Enter your question when prompted.
 
 ---
 
-## 🧪 Testing the System
+## Testing the System
 
 ### Sample Questions to Try
 
@@ -325,7 +354,7 @@ If the system produces errors:
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 ### Model Selection
 
@@ -341,69 +370,19 @@ model: str = "qwen/qwen3-coder:free"  # Change to any OpenRouter model
 model_name = "Qwen/Qwen2.5-0.5B-Instruct"  # Change to any HuggingFace model
 ```
 
-### Environment Variables
-
-- **`HF_HOME`**: Set the cache location for HuggingFace models
-  ```bash
-  export HF_HOME=/path/to/cache
-  ```
-
 ### Using Different Versions
 
 The project includes multiple versions of components:
 
-- **`text_to_cypher.py`**: Basic version
-- **`text_to_cypher_v2.py`**: Improved with OpenRouter (currently used in `app.py`)
-- **`text_to_cypher_v3.py`**: Alternative implementation
+- **`text_to_cypher_v2.py`**: Uses **OpenRouter API** (Cloud) - Best performance, requires API Key.
+- **`text_to_cypher_v3.py`**: Uses **Local Models** - Good for running entirely offline.
 
 To switch versions, modify the import in `app.py`:
 ```python
-from backend.text_to_cypher_v2 import TextToCypher  # Change v2 to v3
+# To use OpenRouter (Cloud):
+from backend.text_to_cypher_v2 import TextToCypher
+
+# To use Local Models:
+# from backend.text_to_cypher_v3 import TextToCypher
 ```
 
----
-
-## 🔧 Troubleshooting
-
-### Common Issues
-
-#### 1. "Connection to Neo4j failed"
-- ✅ Verify `database_uri`, `username`, and `password` in `config.toml`
-- ✅ Ensure your Neo4j instance is running
-- ✅ Check network/firewall settings (especially for AuraDB)
-
-#### 2. "OpenAI API Error" or "OpenRouter API Error"
-- ✅ Verify your `openai_api_key` in `config.toml`
-- ✅ Check if you have API credits remaining
-- ✅ Ensure you're using the correct API key format (`sk-or-v1-...`)
-
-#### 3. "No data found from query"
-- ✅ Verify the database dump was loaded correctly
-- ✅ Check if the graph contains data by running: `MATCH (n) RETURN count(n)` in Neo4j Browser
-- ✅ Review the generated Cypher query for correctness
-
-#### 4. "Model download timeout" (for local models)
-- ✅ Ensure stable internet connection
-- ✅ Set `HF_HOME` to a directory with sufficient space
-- ✅ Manually pre-download models using:
-  ```bash
-  python -c "from transformers import AutoModel; AutoModel.from_pretrained('Qwen/Qwen2.5-0.5B-Instruct')"
-  ```
-
-#### 5. Cypher query syntax errors
-- ✅ Check that the generated query follows Neo4j Cypher syntax
-- ✅ The model may need better prompting or few-shot examples
-- ✅ Verify schema alignment - the model should only use labels/relationships from `schema.txt`
-
-
-## 📝 Additional Notes
-
-### Project Background
-
-This system demonstrates a practical application of knowledge graphs for question answering. By representing the Catan board game as a graph with nodes (Players, Pieces, Resources, etc.) and relationships (OWNS, HAS_RESOURCE, etc.), we can answer complex questions that would be difficult with traditional databases.
-
-### Performance Considerations
-
-- **Local Response Generator**: Runs on CPU by default (Qwen2.5-0.5B-Instruct is lightweight)
-- **Text-to-Cypher**: Uses cloud API for better accuracy
-- **Trade-off**: Local models are free but less accurate; cloud models cost money but perform better
