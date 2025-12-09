@@ -32,7 +32,7 @@ class TextToCypher:
         self,
         schema: str,
         config: Config,
-        model: str = "qwen/qwen3-coder:free",
+        model: str = "kwaipilot/kat-coder-pro:free",
     ):
         self._schema = schema
         self._model = model
