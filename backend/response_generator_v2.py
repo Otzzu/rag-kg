@@ -1,42 +1,30 @@
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-DOMAIN_NAME = "Catan Base Game Rules & Strategy"
-ROLE_DESCRIPTION = f"""
-    You are a smart and friendly assistant specialized in analyzing {DOMAIN_NAME} data.
-    Your task is to answer user questions based strictly on the data found in the database.
-    You should use a helpful, professional, yet conversational tone.
-"""
+SYSTEM_PROMPT = """
+    You are a helpful and strict assistant for Catan Base Game Rules & Strategy.
+    Your sole purpose is to answer the user's question using ONLY the provided database evidence.
+    
+    RULES:
+    1. If the Evidence is empty or implies no results, say "I found no information in the database."
+    2. Do NOT use outside knowledge. Do NOT hallucinate.
+    3. Keep answers concise and direct.
+""".strip()
 
-PROMPT_TEMPLATE = """
-    ### System
-    [ROLE_DESCRIPTION]
-
-    IMPORTANT RULES:
-    1. Answer ONLY based on the information provided in the Evidence section.
-    2. If the Evidence indicates NO data, apologize politely and state that you could not find that information in the database.
-    3. Do NOT hallucinate or invent facts not present in the evidence.
-    4. If the data is technical, explain it in simple terms.
-
-    ### Context
-    Domain: [DOMAIN_NAME]
-    Schema:
-    [SCHEMA]
-
+USER_PROMPT_TEMPLATE = """
     ### User Question
     [QUESTION]
 
-    ### Generated Cypher Query
-    [QUERY]
-
-    ### Evidence
+    ### Database Evidence
     [QUERY_RESULT_STR]
     ([EVIDENCE_STATUS])
 
-    ### Answer
+    Based on the evidence above, provide the answer:
 """.strip()
 
 class ResponseGenerator:
     def __init__(self, schema: str):
+        # Schema is technically unused in the prompt now to save tokens, 
+        # but kept in init for compatibility if needed later.
         model_name = "Qwen/Qwen2.5-0.5B-Instruct"
         self._model = AutoModelForCausalLM.from_pretrained(
             model_name,
@@ -47,25 +35,24 @@ class ResponseGenerator:
         self._schema = schema
 
     def __call__(self, question: str, query: str, query_result_str: str):
+        # 1. Hardcoded safeguards to prevent hallucination on empty/error results
         if query_result_str.strip() in ["(no result)", "[]", ""]:
-            evidence_status = "NO data found in the database."
-        elif "(error occurred)" in query_result_str:
-            evidence_status = "An ERROR occurred while fetching data."
-        else:
-            evidence_status = "Valid data found above."
+            return "I couldn't find any information about that in the database."
+        
+        if "(error occurred)" in query_result_str:
+            return "I'm sorry, there was an error retrieving the data."
 
-        prompt = PROMPT_TEMPLATE
-        prompt = prompt.replace("[ROLE_DESCRIPTION]", ROLE_DESCRIPTION)
-        prompt = prompt.replace("[DOMAIN_NAME]", DOMAIN_NAME)
-        prompt = prompt.replace("[SCHEMA]", self._schema)
-        prompt = prompt.replace("[QUESTION]", question)
-        prompt = prompt.replace("[QUERY]", query)
-        prompt = prompt.replace("[QUERY_RESULT_STR]", query_result_str)
-        prompt = prompt.replace("[EVIDENCE_STATUS]", evidence_status)
+        evidence_status = "Data found."
+
+        # 2. Simplified Prompt for the model (only called when data exists)
+        user_content = USER_PROMPT_TEMPLATE
+        user_content = user_content.replace("[QUESTION]", question)
+        user_content = user_content.replace("[QUERY_RESULT_STR]", query_result_str)
+        user_content = user_content.replace("[EVIDENCE_STATUS]", evidence_status)
 
         messages = [
-            {"role": "system", "content": f"You are a helpful assistant for {DOMAIN_NAME}."},
-            {"role": "user", "content": prompt}
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content}
         ]
         
         text = self._tokenizer.apply_chat_template(
